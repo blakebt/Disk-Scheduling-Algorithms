@@ -1,4 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define MAX_FILEPATH 64
+#define NUMBER_OF_REQUESTS 10
 
 void menu()
 {
@@ -31,7 +36,24 @@ int getCylinders()
     return cylinders;
 }
 
-FILE* generateRequestFile();
+void generateRequestFile(int max)
+{
+    srand(time(NULL));
+    char filePath[MAX_FILEPATH];
+    printf("Please enter the name of the file you wish to write to:\n");
+    scanf(" %s", filePath);
+
+    FILE* file = fopen(filePath, "w+");
+
+    int request;
+    for(int i = 0; i < NUMBER_OF_REQUESTS; i++)
+    {
+        request = rand() % (max-1);
+        fprintf(file, "%d\n", request);
+    }
+
+    fclose(file);
+}
 
 int getInitialPosition(int total) // total is the maximum number of cylinders
 {
@@ -56,11 +78,60 @@ int getInitialPosition(int total) // total is the maximum number of cylinders
     }
     
 }
+
+int FCFS(int headPosition)
+{
+    int queue[NUMBER_OF_REQUESTS]; // the queue that holds the request numbers from the file
+    int nextPosition; // the current position of the disk head, starts at the initial position provided
+    int distanceTraveled = 0;
+    // ask for the file path to the requests file, and verify that it exists
+    char filePath[MAX_FILEPATH];
+    FILE* file;
+    do
+    {
+        printf("Please enter the location of the file containing the requests.\n");
+        scanf(" %s", filePath);
+
+        file = fopen(filePath, "r");
+
+        if(file == NULL)
+        {
+            printf("\nThis file does not exist.\n\n");
+        }
+    } while (file == NULL);
+    
+    // copy the requests from the file, into the queue
+    for(int i = 0; i < NUMBER_OF_REQUESTS; i++)
+    {
+        fscanf(file, "%d", &queue[i]);
+    }
+
+    printf("\nORDER OF SERVICE:\n\n");
+    printf("%d ->", headPosition);
+    // apply the FCFS algorithm
+    for(int j = 0; j < NUMBER_OF_REQUESTS; j++)
+    {
+        nextPosition = queue[j];
+        if(j == NUMBER_OF_REQUESTS-1)
+        {
+            printf(" %d\n\n", nextPosition);
+        }
+        else
+        {
+            printf(" %d ->", nextPosition);
+        }
+        distanceTraveled += abs(nextPosition - headPosition);
+        headPosition = nextPosition;
+    }
+
+    return distanceTraveled;
+}
 int main()
 {
     int choice = 0;
     int cylinders = 0;
     int initialPosition = 0;
+    int totalTraveledFCFS = 0;
     while(1)
     {
         do
@@ -77,6 +148,7 @@ int main()
         else if(choice == 2)
         {
             // generate request file
+            generateRequestFile(cylinders);
         }
         else if(choice == 3)
         {
@@ -90,6 +162,8 @@ int main()
         else if(choice == 4)
         {
             // FCFS
+            totalTraveledFCFS =  FCFS(initialPosition);
+            printf("TOTAL NUMBER OF CYLINDERS TRAVERSED: %d\n\n", totalTraveledFCFS);
         }
         else if(choice == 5)
         {
