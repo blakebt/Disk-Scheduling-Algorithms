@@ -17,7 +17,7 @@ Implementing and analyzing FCFS, SSTF, and SCAN disk scheduling algorithms
 // function to print the menu
 void menu()
 {
-    printf("Please choose one of the following options:\n");
+    printf("\nPlease choose one of the following options:\n");
     printf("1. Number of Cylinders\n");
     printf("2. Generate Random Requests File\n");
     printf("3. Initial Position of Disk Head\n");
@@ -114,13 +114,9 @@ void selectionSort(int queue[], int n)
 
   }
 }
-// function to perform the first come first server disk scheduling algorithm
-int FCFS(int headPosition)
+// function to fill a queue with the requests
+void fillQueue(int queue[])
 {
-    int queue[NUMBER_OF_REQUESTS]; // the queue that holds the request numbers from the file
-    int nextPosition; // the current position of the disk head, starts at the initial position provided
-    int distanceTraveled = 0;
-    // ask for the file path to the requests file, and verify that it exists
     char filePath[MAX_FILEPATH];
     FILE* file;
     do
@@ -141,13 +137,20 @@ int FCFS(int headPosition)
     {
         fscanf(file, "%d", &queue[i]);
     }
-    
-    printf("\nORDER OF SERVICE:\n\n");
-    printf("%d ->", headPosition);
+}
+// function to perform the first come first server disk scheduling algorithm
+int FCFS(int queue[], int headPosition)
+{
+    int nextPosition; // the current position of the disk head, starts at the initial position provided
+    int distanceTraveled = 0;
+    // ask for the file path to the requests file, and verify that it exists
+    printf("\nFCFS ORDER OF SERVICE:\n");
+    printf("\n%d ->", headPosition);
     // apply the FCFS algorithm
     for(int j = 0; j < NUMBER_OF_REQUESTS; j++)
     {
-        nextPosition = queue[j];
+        nextPosition = queue[j]; // set the next position
+        // print the next position
         if(j == NUMBER_OF_REQUESTS-1)
         {
             printf(" %d\n\n", nextPosition);
@@ -165,36 +168,13 @@ int FCFS(int headPosition)
     return distanceTraveled;
 }
 // function to perform the shortest scan time first disk scheduling algorithm
-int SSTF(int headPosition)
+int SSTF(int queue[], int headPosition)
 {
-    int queue[NUMBER_OF_REQUESTS];
     int sequence[NUMBER_OF_REQUESTS]; // array to keep track of the sequence of completed requests
-    char filePath[MAX_FILEPATH];
-    FILE* file;
     int currentHeadPosition = headPosition;
     int currentDistance = 0;
     int distanceTraveled = 0;
     int completed = 0;
-    // get the file containing the requests
-    do
-    {
-        printf("\nPlease enter the location of the file containing the requests.\n");
-        scanf(" %s", filePath);
-
-        file = fopen(filePath, "r");
-
-        if(file == NULL)
-        {
-            printf("\nThis file does not exist.\n\n");
-        }
-    } while (file == NULL);
-    
-    // copy the requests from the file, into the queue
-    for(int i = 0; i < NUMBER_OF_REQUESTS; i++)
-    {
-        fscanf(file, "%d", &queue[i]);
-    }
-
     // apply the SSTF algorithm
     // while there are still requests to be serviced
     while(completed != NUMBER_OF_REQUESTS)
@@ -220,7 +200,7 @@ int SSTF(int headPosition)
     }
 
     // print the completed sequence
-    printf("\nORDER OF SERVICE:\n\n");
+    printf("\nSSTF ORDER OF SERVICE:\n\n");
     printf("%d -> ", headPosition);
     for(int i = 0; i < NUMBER_OF_REQUESTS; i++)
     {
@@ -237,39 +217,16 @@ int SSTF(int headPosition)
     return distanceTraveled;
 }
 // function to perform the SCAN disk scheduling algorithm
-int SCAN(int headPosition)
+int SCAN(int queue[], int headPosition, int max)
 {
-    int queue[NUMBER_OF_REQUESTS];
-    char filePath[MAX_FILEPATH];
     int sequence[NUMBER_OF_REQUESTS];
     int currentHeadPosition = headPosition;
-    FILE* file;
     int completed = 0;
     int distanceTraveled = 0;
     // will be used to find the start position
     int minimum = 99999;
     int distance = 0;
     int startPosition = 0;
-
-    // get the file that contains the requests
-    do
-    {
-        printf("\nPlease enter the location of the file containing the requests.\n");
-        scanf(" %s", filePath);
-
-        file = fopen(filePath, "r");
-
-        if(file == NULL)
-        {
-            printf("\nThis file does not exist.\n\n");
-        }
-    } while (file == NULL);
-    
-    // copy the requests from the file, into the queue
-    for(int i = 0; i < NUMBER_OF_REQUESTS; i++)
-    {
-        fscanf(file, "%d", &queue[i]);
-    }
     // the queue must be sorted for SCAN
     selectionSort(queue, NUMBER_OF_REQUESTS);
     // find the start position
@@ -283,16 +240,31 @@ int SCAN(int headPosition)
         }
     }
     // apply the SCAN algorithm
-    while(completed != NUMBER_OF_REQUESTS)
+    int i;
+    int current = startPosition; // need to keep track of the original start position to restart the algorithm
+    // begin servicing requests in ascending order
+    // start at the closest value that is greater than the current head position
+    for(i = current; i < NUMBER_OF_REQUESTS; i++)
     {
-        int i;
-        // begin servicing requests in ascending order
-        // start at the closest value that is greater than the current head position
-        for(i = startPosition; i < NUMBER_OF_REQUESTS; i++)
+        distanceTraveled += abs(queue[i] - currentHeadPosition);
+        currentHeadPosition = queue[i];
+        sequence[completed] = queue[i];
+        completed++;
+
+    }
+    // if i is equal to the total number of requests, then restart at the beginning
+    // this only matters if all the requests have not been serviced
+    if(i == NUMBER_OF_REQUESTS)
+    {
+        current = startPosition; // reset start position to the beginning of the disk
+        distanceTraveled += (max-1) - queue[i-1];
+        currentHeadPosition = max-1;
+
+        for(int j = current; j >= 0; j--)
         {
-            distanceTraveled += abs(queue[i] - currentHeadPosition);
-            currentHeadPosition = queue[i];
-            sequence[completed] = queue[i];
+            distanceTraveled += abs(queue[j] - currentHeadPosition);
+            currentHeadPosition = queue[j];
+            sequence[completed] = queue[j];
             completed++;
 
             if(completed == NUMBER_OF_REQUESTS)
@@ -300,16 +272,11 @@ int SCAN(int headPosition)
                 break;
             }
         }
-        // if i is equal to the total number of requests, then restart at the beginning
-        // this only matters if all the requests have not been serviced
-        if(i == NUMBER_OF_REQUESTS)
-        {
-            startPosition = 0;
-        }
     }
+    
 
     // print the completed sequence
-    printf("\nORDER OF SERVICE:\n\n");
+    printf("\nSCAN ORDER OF SERVICE:\n\n");
     printf("%d -> ", headPosition);
     for(int i = 0; i < NUMBER_OF_REQUESTS; i++)
     {
@@ -327,18 +294,24 @@ int SCAN(int headPosition)
 
 }
 // function to choose the best performing algorithm
-void chooseBest(int traveledFCFS, int traveledSSTF, int traveledSCAN)
+void chooseBest(int queue[], int headPosition, int max)
 {
-    printf("\nFCFS: %d    SSTF: %d    SCAN: %d\n", traveledFCFS, traveledSSTF, traveledSCAN);
-    if(traveledFCFS == 0 || traveledSSTF == 0 || traveledSCAN == 0)
+    int traveledFCFS;
+    int traveledSSTF;
+    int traveledSCAN;
+    int scanQueue[NUMBER_OF_REQUESTS];
+
+    for(int i = 0; i < NUMBER_OF_REQUESTS; i++) // SSTF changes the queue, so we need a separate queue to use with SCAN
     {
-        printf("\nError. One of the disk scheduling algorithms has not been run.\n");
-        printf("Please run this algorithm before running this analysis.\n");
-        printf("Refer to the above output of the travel distances to see which one has not been run.\n");
-        printf("The values should be postive integers.\n\n");
-        return;
+        scanQueue[i] = queue[i];
     }
 
+    traveledFCFS = FCFS(queue, headPosition); // find the total cylinders traveled in FCFS
+    traveledSSTF = SSTF(queue, headPosition); // find the total cylinders traveled in SSTF
+    traveledSCAN = SCAN(scanQueue, headPosition, max); // find the total cylinders traveled in SCAN
+
+    // print the results
+    printf("FCFS: %d    SSTF: %d    SCAN: %d\n", traveledFCFS, traveledSSTF, traveledSCAN);
     if(traveledFCFS < traveledSSTF && traveledFCFS < traveledSCAN)
     {
         printf("\nFCFS performed the best given these requests.\n\n");
@@ -363,6 +336,10 @@ void chooseBest(int traveledFCFS, int traveledSSTF, int traveledSCAN)
     {
         printf("\nSSTF and SCAN performed the best given these requests.\n\n");
     }
+    else if(traveledFCFS == traveledSSTF && traveledFCFS == traveledSCAN)
+    {
+        printf("\nAll three algorithms performed equally given these requests.\n\n");
+    }
     else
     {
         printf("\nError. Missed case.\n\n");
@@ -377,6 +354,7 @@ int main()
     int totalTraveledFCFS = 0;
     int totalTraveledSSTF = 0;
     int totalTraveledSCAN = 0;
+    int queue[NUMBER_OF_REQUESTS];
     while(1)
     {
         do
@@ -407,24 +385,28 @@ int main()
         else if(choice == 4)
         {
             // FCFS
-            totalTraveledFCFS =  FCFS(initialPosition);
+            fillQueue(queue);
+            totalTraveledFCFS =  FCFS(queue, initialPosition);
             printf("TOTAL NUMBER OF CYLINDERS TRAVERSED: %d\n\n", totalTraveledFCFS);
         }
         else if(choice == 5)
         {
             // SSTF
-            totalTraveledSSTF = SSTF(initialPosition);
+            fillQueue(queue);
+            totalTraveledSSTF = SSTF(queue, initialPosition);
             printf("TOTAL NUMBER OF CYLINDERS TRAVERSED: %d\n\n", totalTraveledSSTF);
         }
         else if(choice == 6)
         {
             // SCAN
-            totalTraveledSCAN = SCAN(initialPosition);
+            fillQueue(queue);
+            totalTraveledSCAN = SCAN(queue, initialPosition, cylinders);
             printf("TOTAL NUMBER OF CYLINDERS TRAVERSE: %d\n\n", totalTraveledSCAN);
         }
         else if(choice == 7)
         {
-            chooseBest(totalTraveledFCFS, totalTraveledSSTF, totalTraveledSCAN);
+            fillQueue(queue);
+            chooseBest(queue, initialPosition, cylinders);
         }
         else if(choice == 8)
         {
